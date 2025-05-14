@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoVault Login</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="auth-container">
+    <div id="loginForm">
+      <h2>Sign In</h2>
+      <form>
+        <label for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" required>
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" required>
+        <button type="submit">Login</button>
+      </form>
+      <p>Don't have an account? <button type="button" onclick="showSignup()">Sign Up</button></p>
+    </div>
+    <div id="signupForm" style="display:none;">
+      <h2>Sign Up</h2>
+      <form style="display: flex; flex-direction: column; gap: 12px;">
+        <label for="signupName">Name</label>
+        <input type="text" id="signupName" required placeholder="Please give us Your Nick Name">
+        <label for="signupEmail">Email Address</label>
+        <input type="email" id="signupEmail" required placeholder="we will not spam You">
+        <label for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" required placeholder="We will keep You Safe!">
+        <button type="submit">Register</button>
+      </form>
+      <p>Already have an account? <button type="button" onclick="showLogin()">Sign In</button></p>
+    </div>
+  </div>
+
+  <script type="module" src="login.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+    import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBu54ZKJX7ZHeyemLCxej8addexzwbioNA",
+      authDomain: "autovault-c2acb.firebaseapp.com",
+      projectId: "autovault-c2acb",
+      storageBucket: "autovault-c2acb.appspot.com",
+      messagingSenderId: "356679832643",
+      appId: "1:356679832643:web:90b0626c070c0ffd19f0f6",
+      measurementId: "G-4FZYY6PNYP"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Login form submit
+    document.querySelector('#loginForm form').onsubmit = async function(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        localStorage.setItem('autovault_username', email);
+        window.location.href = "splash.html";
+      } catch (err) {
+        alert("Login failed: " + (err.message || err));
+      }
+    };
+
+    // Signup form submit
+    document.querySelector('#signupForm form').onsubmit = async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          name: name,
+          email: email
+        });
+        localStorage.setItem('autovault_username', email);
+        // Wait for auth state and redirect
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            window.location.href = "splash.html";
+          }
+        });
+      } catch (err) {
+        alert("Signup failed: " + (err.message || err));
+      }
+    };
+  </script>
+  <script>
+    function showSignup() {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('signupForm').style.display = 'block';
+    }
+    function showLogin() {
+      document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
+    }
+    // Attach to window for inline HTML
+    window.showSignup = showSignup;
+    window.showLogin = showLogin;
+  </script>
+</body>
+</html>

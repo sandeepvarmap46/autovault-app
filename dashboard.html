@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AutoVault Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <header style="display: flex; justify-content: space-between; align-items: center;">
+      <h2 id="greeting"></h2>
+      <button id="logoutBtn" class="logout-btn">Logout</button>
+    </header>
+    <main>
+      <button class="add-vehicle-btn" onclick="openModal()">+ Add Vehicle</button>
+      <!-- Vehicle Modal -->
+      <div id="vehicleModal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <span class="close" onclick="closeModal()">&times;</span>
+          <h3>Add Vehicle Details</h3>
+          <form id="vehicleForm">
+            <label for="vehicleNumber">Vehicle Number</label>
+            <input type="text" id="vehicleNumber" name="vehicleNumber" required>
+            <label for="yearOfPurchase">Year of Purchase</label>
+            <input type="number" id="yearOfPurchase" name="yearOfPurchase" min="1900" max="2099" required>
+            <button type="submit">Add Vehicle</button>
+          </form>
+        </div>
+      </div>
+      <!-- Vehicle List -->
+      <section id="vehicleList"></section>
+    </main>
+  </div>
+  <!-- Logout Modal -->
+  <div id="logoutModal" class="modal" style="display:none;">
+    <div class="modal-content" style="text-align:center;">
+      <span class="close" onclick="closeLogoutModal()">&times;</span>
+      <h2>THANK YOU FOR CHOOSING US <span style="color:#e25555;">&#10084;&#65039;</span>!</h2>
+    </div>
+  </div>
+  <script type="module">
+    import { db } from './firebase-init.js';
+    import {
+      collection,
+      addDoc,
+      getDocs,
+      query,
+      where
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // Greeting logic
+    const userName = localStorage.getItem('autovault_username') || "";
+    function getGreeting() {
+      const now = new Date();
+      const hour = now.getHours();
+      if (hour < 12) return "Good Morning";
+      if (hour < 18) return "Good Afternoon";
+      return "Good Evening";
+    }
+    document.getElementById('greeting').textContent = userName
+      ? `${getGreeting()}, ${userName}`
+      : `${getGreeting()}`;
+
+    // Modal logic
+    function openModal() {
+      document.getElementById('vehicleModal').style.display = 'block';
+    }
+    window.openModal = openModal;
+
+    function closeModal() {
+      document.getElementById('vehicleModal').style.display = 'none';
+    }
+    window.closeModal = closeModal;
+
+    function closeLogoutModal() {
+      document.getElementById('logoutModal').style.display = 'none';
+    }
+    window.closeLogoutModal = closeLogoutModal;
+
+    window.onclick = function(event) {
+      const vehicleModal = document.getElementById('vehicleModal');
+      const logoutModal = document.getElementById('logoutModal');
+      if (event.target === vehicleModal) closeModal();
+      if (event.target === logoutModal) closeLogoutModal();
+    }
+
+    // Firestore vehicle logic
+    const vehiclesRef = collection(db, "vehicles");
+
+    async function loadVehicles() {
+      const list = document.getElementById('vehicleList');
+      list.innerHTML = '';
+      if (!userName) return;
+      const q = query(vehiclesRef, where("user", "==", userName));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const vehicle = doc.data();
+        const entry = document.createElement('div');
+        entry.className = 'vehicle-entry';
+        entry.textContent = `Vehicle: ${vehicle.number} | Year: ${vehicle.year}`;
+        list.appendChild(entry);
+      });
+    }
+    loadVehicles();
+
+    document.getElementById('vehicleForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const number = document.getElementById('vehicleNumber').value;
+      const year = document.getElementById('yearOfPurchase').value;
+      try {
+        await addDoc(vehiclesRef, {
+          user: userName,
+          number: number,
+          year: year
+        });
+        await loadVehicles();
+        closeModal();
+        this.reset();
+      } catch (error) {
+        alert("Error saving vehicle: " + error.message);
+      }
+    };
+
+    // Logout logic
+    document.getElementById('logoutBtn').onclick = function() {
+      document.getElementById('logoutModal').style.display = 'block';
+      setTimeout(() => {
+        window.location.href = "splash.html";
+      }, 2000);
+    };
+  </script>
+</body>
+</html>

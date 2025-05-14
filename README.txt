@@ -1,0 +1,1 @@
+Replace YOUR_API_KEY and Firebase values in firebase-init.js with your actual config.
