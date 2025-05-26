@@ -1,86 +1,91 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
 import {
   getAuth,
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
-// Firebase config
+// Your Firebase config (same as splash.html)
 const firebaseConfig = {
   apiKey: "AIzaSyBu54ZKJX7ZHeyemLCxej8addexzwbioNA",
   authDomain: "autovault-c2acb.firebaseapp.com",
   projectId: "autovault-c2acb",
-  appId: "1:356679832643:web:90b0626c070c0ffd19f0f6"
+  storageBucket: "autovault-c2acb.firebasestorage.app",
+  messagingSenderId: "356679832643",
+  appId: "1:356679832643:web:90b0626c070c0ffd19f0f6",
+  measurementId: "G-4FZYY6PNYP"
 };
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 
-// Show login form
-window.showLogin = () => {
-  document.getElementById("form-container").innerHTML = `
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="Email" /><br />
-    <input type="password" id="password" placeholder="Password" /><br />
-    <button onclick="login()">Sign In</button>
-  `;
+// Toggle forms
+const loginFormDiv = document.getElementById('loginForm');
+const signupFormDiv = document.getElementById('signupForm');
+document.getElementById('showSignupBtn').onclick = () => {
+  loginFormDiv.style.display = 'none';
+  signupFormDiv.style.display = '';
+};
+document.getElementById('showLoginBtn').onclick = () => {
+  signupFormDiv.style.display = 'none';
+  loginFormDiv.style.display = '';
 };
 
-// Show signup form
-window.showSignup = () => {
-  document.getElementById("form-container").innerHTML = `
-    <h2>Sign Up</h2>
-    <input type="text" id="name" placeholder="Full Name" /><br />
-    <input type="email" id="email" placeholder="Email" /><br />
-    <input type="password" id="password" placeholder="Password" /><br />
-    <button onclick="signup()">Create Account</button>
-  `;
-};
-
-// Login function
-window.login = async () => {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
+// Handle login
+document.getElementById('loginFormElement').onsubmit = async function(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    // Store username (before @) for greeting
-    localStorage.setItem('autovault_username', email.split('@')[0]);
-    window.location.href = "dashboard.html";
-  } catch (error) {
-    alert("Login error: " + error.message);
+    // Play login audio if present
+    const loginAudio = document.getElementById('loginAudio');
+    if (loginAudio) {
+      loginAudio.currentTime = 0;
+      loginAudio.play().catch(() => {});
+    }
+    window.location.href = "splash.html";
+  } catch (err) {
+    alert("Login failed: " + (err.message || err));
   }
 };
 
-// Signup function
-window.signup = async () => {
-  const name = document.getElementById("name").value;
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
+// Handle signup
+document.getElementById('signupFormElement').onsubmit = async function(e) {
+  e.preventDefault();
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  if (!name) {
+    alert("Please enter your name.");
+    return;
+  }
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    await setDoc(doc(db, "users", user.uid), {
-      name: name,
-      email: email
-    });
-
-    alert("Signup successful!");
-    window.location.href = "dashboard.html";
-  } catch (error) {
-    alert("Signup error: " + error.message);
+    await createUserWithEmailAndPassword(auth, email, password);
+    // Play login audio if present
+    const loginAudio = document.getElementById('loginAudio');
+    if (loginAudio) {
+      loginAudio.currentTime = 0;
+      loginAudio.play().catch(() => {});
+    }
+    // Directly redirect to dashboard (splash.html) after registration
+    window.location.href = "splash.html";
+  } catch (err) {
+    alert("Signup failed: " + (err.message || err));
   }
 };
 
-// Load login form by default
-window.addEventListener("DOMContentLoaded", () => {
-  showLogin();
-});
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+// Handle forgot password
+document.getElementById('forgotPasswordBtn').onclick = async function() {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) {
+    alert("Please enter your email address first.");
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("Password reset email sent! Please check your inbox.");
+  } catch (err) {
+    alert("Failed to send reset email: " + (err.message || err));
+  }
+};

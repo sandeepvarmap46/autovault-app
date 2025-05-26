@@ -2,18 +2,225 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>AutoVault Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
+  <style>
+    /* Responsive splash screen logo and text */
+    #splashLogo {
+      width: 22vw;
+      height: 22vw;
+      max-width: 180px;
+      max-height: 180px;
+      min-width: 80px;
+      min-height: 80px;
+    }
+    #splashText {
+      font-size: 6vw;
+    }
+    @media (max-width: 600px) {
+      .dashboard-container {
+        padding: 0 8px !important;
+      }
+      #splashLogo {
+        width: 28vw;
+        height: 28vw;
+        max-width: 120px;
+        max-height: 120px;
+      }
+      #splashText {
+        font-size: 2rem;
+      }
+    }
+    @media (max-width: 400px) {
+      #splashLogo {
+        width: 38vw;
+        height: 38vw;
+        max-width: 90px;
+        max-height: 90px;
+      }
+      #splashText {
+        font-size: 1.3rem;
+      }
+    }
+    /* Make dashboard-container responsive */
+    .dashboard-container {
+      width: 100%;
+      max-width: 700px;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    /* Remove side spaces for APK/WebView mode */
+    body.apk-mode .dashboard-container {
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+  </style>
 </head>
 <body>
-  <div class="dashboard-container">
-    <header style="display: flex; justify-content: space-between; align-items: center;">
-      <h2 id="greeting"></h2>
-      <button id="logoutBtn" class="logout-btn">Logout</button>
+  <!-- Splash Screen -->
+  <div id="splashScreen" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#111;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.6s;">
+    <audio id="splashAudio" src="splash-tune.mp3" preload="auto"></audio>
+    <img id="splashLogo" src="logo.png" alt="AutoVault Logo" style="width:140px;height:140px;margin-bottom:28px;opacity:0;transition:opacity 1.2s;">
+    <span id="splashText" style="opacity:0;transition:opacity 1.2s;color:#FFA500;font-size:3.2rem;font-weight:700;letter-spacing:3px;font-family:'Segoe UI',sans-serif;text-shadow:0 2px 16px #000;">AUTOVAULT</span>
+  </div>
+  <div class="dashboard-container" style="max-width: 700px; margin: 0 auto; box-shadow: 0 0 16px rgba(0,0,0,0.08); border-radius: 16px; background: #fff; min-height: 96vh; padding: 0 32px;">
+    <header style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 24px;">
+      <div style="margin-bottom: 10px;">
+        <img src="logo.png" alt="AutoVault Logo" style="height:90px; display:block; margin: 0 auto;"/>
+      </div>
+      <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+        <h2 id="greeting" style="margin: 0;"></h2>
+        <div>
+          <button id="logoutBtn" class="logout-btn">Logout</button>
+        </div>
+      </div>
     </header>
     <main>
-      <button class="add-vehicle-btn" onclick="openModal()">+ Add Vehicle</button>
+      <!-- Vehicle Profile Section -->
+      <section style="margin-top: 24px; background: #f6f8fa; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 20px 18px 16px 18px; margin-bottom: 28px;">
+        <h3 style="margin-bottom: 12px; color: #2d3a4a; letter-spacing: 1px;">Vehicle Profile</h3>
+        <section id="vehicleList"></section>
+        <button class="add-vehicle-btn" onclick="openModal()" style="margin-top: 18px; font-size: 14px; padding: 6px 18px; border-radius: 6px; background: #2d8cff; color: #fff; border: none; box-shadow: 0 1px 4px rgba(45,140,255,0.08); transition: background 0.2s;">+ Add Vehicle</button>
+      </section>
+
+      <!-- Fuel Records Section -->
+      <section style="margin-top: 24px; background: #f6f8fa; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 20px 18px 16px 18px; margin-bottom: 28px;">
+        <h3 style="margin-bottom: 12px; color: #2d3a4a; letter-spacing: 1px;">Fuel Records</h3>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+          <label for="fuelVehicleDropdown" style="margin-bottom: 0;">Select Vehicle:</label>
+          <select id="fuelVehicleDropdown" style="flex: 1;" title="Select Vehicle for Fuel Records">
+            <option value="">Select Vehicle</option>
+            <!-- Options populated dynamically -->
+          </select>
+          <button id="fuelVehicleGoBtn" style="font-size: 14px; padding: 6px 14px; border-radius: 6px; background: #2d8cff; color: #fff; border: none;" title="Show Fuel Records">GO</button>
+        </div>
+        <div id="fuelRecordsTableContainer" style="margin-top: 18px;">
+          <!-- Fuel records table will be dynamically populated here -->
+        </div>
+        <div id="fuelHistoryControls" style="display:none; margin-top:12px; gap:8px; align-items:center;">
+          <input type="date" id="fuelHistoryStart" style="max-width:140px;" title="Start Date for Fuel History">
+          <span style="margin:0 4px;">to</span>
+          <input type="date" id="fuelHistoryEnd" style="max-width:140px;" title="End Date for Fuel History">
+          <button id="showFuelHistoryBtn" style="padding:4px 12px; border-radius:5px; background:#2d8cff; color:#fff; border:none;" title="Show Fuel History">Show</button>
+          <button id="resetFuelHistoryBtn" style="padding:4px 12px; border-radius:5px; background:#fff; color:#2d8cff; border:1px solid #2d8cff; margin-left:8px;" title="Reset Fuel History">Reset</button>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+          <button id="fuelHistoryToggleBtn" style="flex:1; font-size:14px; padding:6px 18px; border-radius:6px; background:#fff; color:#2d8cff; border:1px solid #2d8cff;" title="Toggle Fuel History">Fuel History</button>
+          <button id="fuelStatsBtn" style="flex:1; font-size:14px; padding:6px 18px; border-radius:6px; background:#fff; color:#2d8cff; border:1px solid #2d8cff;" title="Show Fuel Stats">Fuel Stats</button>
+          <button id="addFuelRecordBtn" style="flex:1; font-size:14px; padding:6px 18px; border-radius:6px; background:#2d8cff; color:#fff; border:none;" title="Add Fuel Record">+ Add Record</button>
+        </div>
+      </section>
+      <!-- Fuel Stats Modal -->
+      <div id="fuelStatsModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:24px 20px;border-radius:10px;min-width:320px;max-width:90vw;position:relative;box-shadow:0 4px 24px rgba(0,0,0,0.18);">
+          <button id="closeFuelStats" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.3em;cursor:pointer;">&times;</button>
+          <h4 style="margin-top:0;">Monthly Fuel Spending</h4>
+          <canvas id="fuelStatsChart" width="320" height="180"></canvas>
+        </div>
+      </div>
+      <!-- Fuel Stats Month/Year Modal -->
+      <div id="fuelStatsMonthModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:1001;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:24px 20px;border-radius:10px;min-width:260px;max-width:90vw;position:relative;box-shadow:0 4px 24px rgba(0,0,0,0.18);display:flex;flex-direction:column;align-items:center;">
+          <button id="closeFuelStatsMonthModal" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.3em;cursor:pointer;">&times;</button>
+          <h4 style="margin-top:0;">Select Month & Year</h4>
+          <div style="display:flex;gap:10px;margin-bottom:16px;">
+            <select id="fuelStatsMonthSelect" title="Select Month" style="font-size:1rem;padding:4px 8px;">
+              <option value="">Month</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+            <select id="fuelStatsYearSelect" title="Select Year" style="font-size:1rem;padding:4px 8px;"></select>
+          </div>
+          <button id="fuelStatsShowBtn" style="padding:6px 18px;border-radius:6px;background:#2d8cff;color:#fff;border:none;font-size:1rem;">Show Stats</button>
+          <div id="fuelStatsResult" style="margin-top:18px;font-size:1.1rem;color:#2d3a4a;font-weight:600;"></div>
+        </div>
+      </div>
+      <!-- Chart.js CDN -->
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+      <!-- Fuel Record Modal -->
+      <div id="fuelRecordModal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <span class="close" onclick="closeFuelRecordModal()">&times;</span>
+          <h3 id="fuelRecordModalTitle">Add Fuel Record</h3>
+          <form id="fuelRecordForm">
+            <label for="fuelRecordVehicle" style="margin-bottom:0;">Vehicle</label>
+            <select id="fuelRecordVehicle" name="fuelRecordVehicle" required style="margin-bottom:10px;" title="Select Vehicle">
+              <!-- Options populated dynamically -->
+            </select>
+            <label for="fuelOdo">Current ODO Meter</label>
+            <input type="number" id="fuelOdo" name="fuelOdo" min="0" required title="Current Odometer Reading" placeholder="ODO Meter">
+            <label for="fuelLiters">Liters Filled</label>
+            <input type="number" id="fuelLiters" name="fuelLiters" min="0" step="0.01" required title="Liters Filled" placeholder="Liters">
+
+            <label for="fuelExpense">Expense</label>
+            <input type="number" id="fuelExpense" name="fuelExpense" min="0" step="0.01" required title="Fuel Expense" placeholder="Expense">
+            <label for="fuelDate">Date</label>
+            <input type="date" id="fuelDate" name="fuelDate" required style="width:100%;max-width:300px;" title="Date of Fuel Record">
+            <button type="submit" id="fuelRecordFormSubmitBtn" style="margin-top: 12px; font-size: 14px; padding: 6px 18px; border-radius: 6px; background: #2d8cff; color: #fff; border: none;" title="Save Fuel Record">Save</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Vehicle Service Record Section -->
+      <section style="margin-top: 0; background: #f6f8fa; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 20px 18px 16px 18px;">
+        <h3 style="color: #2d3a4a; letter-spacing: 1px;">Vehicle Service Record</h3>
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 10px;">
+          <label for="serviceVehicleDropdown" style="margin-bottom: 0;">Select Vehicle:</label>
+          <select id="serviceVehicleDropdown" style="flex: 1;">
+            <option value="">Select Vehicle</option>
+            <!-- Options populated dynamically -->
+          </select>
+          <button id="serviceVehicleGoBtn" style="font-size: 14px; padding: 6px 14px; border-radius: 6px; background: #2d8cff; color: #fff; border: none;">GO</button>
+        </div>
+        <div id="serviceRecordList">
+          <!-- Service records for selected vehicle will be shown here -->
+          <p style="color: #888;">Select a vehicle above to view or add service records.</p>
+        </div>
+        <div style="display: flex; gap: 12px; margin-top: 18px;">
+          <button id="addServiceBtn" style="font-size: 14px; padding: 6px 18px; border-radius: 6px; background: #2d8cff; color: #fff; border: none; box-shadow: 0 1px 4px rgba(45,140,255,0.08); transition: background 0.2s;">+ Add Service Record</button>
+          <button id="serviceHistoryBtn" style="font-size: 14px; padding: 6px 18px; border-radius: 6px; background: #fff; color: #2d8cff; border: 1px solid #2d8cff; box-shadow: 0 1px 4px rgba(45,140,255,0.04); transition: background 0.2s;">Service History</button>
+        </div>
+      </section>
+      <!-- Service Record Modal -->
+      <div id="serviceModal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <span class="close" onclick="closeServiceModal()">&times;</span>
+          <h3 id="serviceModalTitle">Add Service Record</h3>
+          <form id="serviceForm">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
+              <label for="serviceVehicle" style="margin-bottom:0;">Vehicle</label>
+              <select id="serviceVehicle" name="serviceVehicle" required>
+                <option value="">Select Vehicle</option>
+                <!-- Options will be populated dynamically -->
+              </select>
+            </div>
+            <label for="serviceDate">Date of Service</label>
+            <input type="date" id="serviceDate" name="serviceDate" required style="width:100%;max-width:300px;">
+            <label for="odoMeter">Current ODO Meter</label>
+            <input type="number" id="odoMeter" name="odoMeter" required min="0">
+            <label for="serviceCost">Cost of Service</label>
+            <input type="number" id="serviceCost" name="serviceCost" required min="0" step="0.01">
+            <label for="serviceNotes">Notes</label>
+            <textarea id="serviceNotes" name="serviceNotes" rows="2" style="resize:vertical;" placeholder="Describe service, repairs, etc."></textarea>
+            <button type="submit" id="serviceFormSubmitBtn" style="margin-top: 12px; font-size: 14px; padding: 6px 18px; border-radius: 6px; background: #2d8cff; color: #fff; border: none;">Add Record</button>
+          </form>
+        </div>
+      </div>
       <!-- Vehicle Modal -->
       <div id="vehicleModal" class="modal" style="display:none;">
         <div class="modal-content">
@@ -28,111 +235,389 @@
                 <option value="Car">Car</option>
                 <option value="Other">Other</option>
               </select>
+              <!-- Add Fuel dropdown here -->
+              <label for="vehicleFuel" style="margin-bottom:0; margin-left:10px;">Fuel</label>
+              <select id="vehicleFuel" name="vehicleFuel" required>
+                <option value="">Select Fuel</option>
+                <option value="Petrol">Petrol</option>
+                <option value="Diesel">Diesel</option>
+                <option value="LPG">LPG</option>
+              </select>
             </div>
+            <div style="height: 12px;"></div>
             <label for="vehicleNumber" style="margin-top:10px;">Vehicle Number</label>
             <input type="text" id="vehicleNumber" name="vehicleNumber" required style="text-transform:uppercase; margin-bottom: 8px;">
             <label for="vehicleModel">Vehicle Model</label>
             <input type="text" id="vehicleModel" name="vehicleModel" required style="text-transform:uppercase;">
+            <label for="insuranceExpiry" style="margin-top:0;">Vehicle Insurance Expiry (dd-mm-yyyy)</label>
+            <input type="date" id="insuranceExpiry" name="insuranceExpiry" style="margin-bottom: 2px;">
+            <label for="pollutionExpiry" style="margin-top:0;">Vehicle Pollution Certificate Expiry (dd-mm-yyyy)</label>
+            <input type="date" id="pollutionExpiry" name="pollutionExpiry" style="margin-bottom: 8px;">
             <label for="yearOfPurchase">Year of Purchase</label>
             <input type="number" id="yearOfPurchase" name="yearOfPurchase" min="1900" max="2099" required>
             <button type="submit" id="vehicleFormSubmitBtn">Add Vehicle</button>
           </form>
         </div>
       </div>
-      <!-- Vehicle List -->
-      <section id="vehicleList"></section>
     </main>
-  </div>
-  <!-- Logout Modal -->
-  <div id="logoutModal" class="modal" style="display:none;">
-    <div class="modal-content" style="text-align:center;">
-      <span class="close" onclick="closeLogoutModal()">&times;</span>
-      <h2>THANK YOU FOR CHOOSING US <span style="color:#e25555;">&#10084;&#65039;</span>!</h2>
+    <!-- Proudly Made in India banner (keep this) -->
+    <div style="text-align: center; font-family: 'Poppins', sans-serif; font-size: 14px; margin-top: 10px;">
+      <span>🇮🇳 Proudly Made in India ❤</span>
     </div>
-  </div>
-  <script type="module">
-    import { auth, db } from './firebase-init.js';
-    import {
-      collection,
-      addDoc,
-      getDocs,
-      query,
-      where,
-      doc,
-      deleteDoc,
-      updateDoc
-    } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
-    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+    <!-- Footer (keep only one, remove JS-inserted duplicate) -->
+    <div style="background-color: #f0f8ff; border-radius: 10px; padding: 15px; margin: 20px auto; text-align: center; width: 90%; max-width: 600px; font-family: 'Poppins', sans-serif; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <p style="margin-bottom: 8px;">
+        Developed with love by <strong>Sandeep Penmetsa</strong>
+      </p>
+      <p>
+        <a href="https://twitter.com/Sandeepvarma79" target="_blank" style="margin: 0 5px; text-decoration: none;">X</a>
+        |
+        <a href="https://www.linkedin.com/in/sandeeppenmetsa/" target="_blank" style="margin: 0 5px; text-decoration: none;">LinkedIn</a>
+        |
+        <a href="mailto:sandeepvarma.14322@gmail.com" style="margin: 0 5px; text-decoration: none;">Email</a>
+      </p>
+      <p style="margin-top: 10px; font-size: 13px;">
+        Thank you for using my very first app! ☺ Your feedback means the world to me. Let’s connect!
+       </p>
+    </div>
+    <!-- Logout Modal -->
+    <div id="logoutModal" class="modal" style="display:none;">
+      <div class="modal-content" style="text-align:center;">
+        <span class="close" onclick="closeLogoutModal()">&times;</span>
+        <h2>THANK YOU FOR CHOOSING US <span style="color:#e25555;">&#10084;&#65039;</span>!</h2>
+      </div>
+    </div>
+    <!-- Add logout audio -->
+    <audio id="logoutAudio" src="logout.mp3" preload="auto"></audio>
+    <script type="module">
+      import { auth, db } from "./firebase-init.js";
+      import {
+        collection,
+        query,
+        where,
+        getDocs,
+        getDoc,
+        addDoc,
+        updateDoc,
+        deleteDoc,
+        doc
+      } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
+      import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
-    document.addEventListener('DOMContentLoaded', () => {
-      // Greeting
-      function getGreeting() {
-        const now = new Date();
-        const hour = now.getHours();
-        if (hour < 12) return "Good Morning!";
-        if (hour < 18) return "Good Afternoon!";
-        return "Good Evening!";
+      // Splash animation: black screen, then fade in logo and text, play tune, then fade out all
+      function showSplashSequence() {
+        const splash = document.getElementById('splashScreen');
+        const splashLogo = document.getElementById('splashLogo');
+        const splashText = document.getElementById('splashText');
+        const splashAudio = document.getElementById('splashAudio');
+        if (!splash || !splashText || !splashLogo) return;
+        splashLogo.style.opacity = '0';
+        splashText.style.opacity = '0';
+        // After 1s, fade in logo and text together and play audio
+        setTimeout(() => {
+          splashLogo.style.opacity = '1';
+          splashText.style.opacity = '1';
+          if (splashAudio && splashAudio.paused) {
+            // Play audio, ignore errors if autoplay is blocked
+            splashAudio.currentTime = 0;
+            splashAudio.play().catch(() => {});
+          }
+        }, 1000);
+        // After 4s, fade out splash
+        setTimeout(() => {
+          splash.style.opacity = '0';
+          setTimeout(() => { splash.style.display = 'none'; }, 600);
+        }, 4000);
       }
-      document.getElementById('greeting').textContent = getGreeting();
 
-      // Modal logic
-      function openModal() {
-        document.getElementById('vehicleModal').style.display = 'block';
-      }
-      function closeModal() {
-        document.getElementById('vehicleModal').style.display = 'none';
-      }
-      function closeLogoutModal() {
-        document.getElementById('logoutModal').style.display = 'none';
-      }
-      window.openModal = openModal;
-      window.closeModal = closeModal;
-      window.closeLogoutModal = closeLogoutModal;
+      window.addEventListener('DOMContentLoaded', () => {
+        showSplashSequence();
+      });
 
-      window.onclick = function(event) {
-        const vehicleModal = document.getElementById('vehicleModal');
-        const logoutModal = document.getElementById('logoutModal');
-        if (event.target === vehicleModal) closeModal();
-        if (event.target === logoutModal) closeLogoutModal();
+      // Hide splash screen after 4 seconds, but only if not redirecting to login
+      function hideSplashScreen() {
+        const splash = document.getElementById('splashScreen');
+        if (splash) {
+          splash.style.opacity = '0';
+          setTimeout(() => { splash.style.display = 'none'; }, 600);
+        }
+      }
+
+      // Show splash for 4s, then hide (unless redirected to login)
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(hideSplashScreen, 4000);
+      });
+
+      // Detect if running in a WebView (Android/iOS) and add 'apk-mode' class to body
+      (function() {
+        function isWebView() {
+          // Android WebView
+          if (window.AndroidWebView || window.cordova || window.Capacitor) return true;
+          // iOS WebView
+          const standalone = window.navigator.standalone;
+          const userAgent = window.navigator.userAgent || '';
+          const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+          const isSafari = isIOS && userAgent.includes('Safari') && !userAgent.includes('CriOS');
+          if (isIOS && !isSafari) return true;
+          // Generic check for WebView
+          if (userAgent.match(/wv|WebView|(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i)) return true;
+          return false;
+        }
+        if (isWebView()) {
+          document.body.classList.add('apk-mode');
+        }
+      })();
+
+      // --- Fuel Stats Modal & Chart.js Integration ---
+      let fuelStatsChartInstance = null;
+      function openFuelStatsModal() {
+        // Instead of showing the chart modal, show month/year modal
+        document.getElementById('fuelStatsMonthModal').style.display = 'flex';
+        populateFuelStatsYearSelect();
+        document.getElementById('fuelStatsResult').textContent = '';
+      }
+      function closeFuelStatsModal() {
+        document.getElementById('fuelStatsModal').style.display = 'none';
+      }
+      // Close month modal
+      document.getElementById('closeFuelStatsMonthModal').onclick = function() {
+        document.getElementById('fuelStatsMonthModal').style.display = 'none';
       };
-
-      // Wait for Firebase Auth state
-      onAuthStateChanged(auth, user => {
+      // Populate year select with last 10 years
+      function populateFuelStatsYearSelect() {
+        const yearSelect = document.getElementById('fuelStatsYearSelect');
+        const now = new Date();
+        const thisYear = now.getFullYear();
+        yearSelect.innerHTML = '<option value="">Year</option>';
+        for (let y = thisYear; y >= thisYear - 10; y--) {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.textContent = y;
+          yearSelect.appendChild(opt);
+        }
+      }
+      // Show Fuel Stats button logic
+      document.getElementById('fuelStatsBtn').onclick = openFuelStatsModal;
+      // Show stats for selected month/year
+      document.getElementById('fuelStatsShowBtn').onclick = async function() {
+        const month = document.getElementById('fuelStatsMonthSelect').value;
+        const year = document.getElementById('fuelStatsYearSelect').value;
+        const resultDiv = document.getElementById('fuelStatsResult');
+        if (!month || !year) {
+          resultDiv.textContent = 'Please select both month and year.';
+          return;
+        }
+        // Get selected vehicle
+        const vehicleId = document.getElementById('fuelVehicleDropdown').value;
+        const user = auth.currentUser;
+        if (!user || !vehicleId) {
+          resultDiv.textContent = 'Please select a vehicle first.';
+          return;
+        }
+        // Fetch all fuel records for this vehicle
+        const q = query(collection(db, "fuelRecords"), where("user", "==", user.uid), where("vehicleId", "==", vehicleId));
+        const querySnapshot = await getDocs(q);
+        let total = 0;
+        querySnapshot.forEach(docSnap => {
+          const rec = docSnap.data();
+          // rec.date is expected in DD-MM-YYYY or YYYY-MM-DD
+          let recMonth = '', recYear = '';
+          if (rec.date && /^\d{2}-\d{2}-\d{4}$/.test(rec.date)) {
+            [, recMonth, recYear] = rec.date.split('-');
+          } else if (rec.date && /^\d{4}-\d{2}-\d{2}$/.test(rec.date)) {
+            [recYear, recMonth] = rec.date.split('-');
+          }
+          if (recMonth === month && recYear === year) {
+            total += Number(rec.expense || 0);
+          }
+        });
+        resultDiv.textContent = `Total Fuel Expense for ${year}-${month}: ₹${total.toFixed(2)}`;
+      };
+      // ...existing code...
+      onAuthStateChanged(auth, async user => {
         if (!user) {
+          // Not logged in, redirect to login page
           window.location.href = "login.html";
           return;
         }
 
-        const vehiclesRef = collection(db, "vehicles");
+        // All dashboard logic goes here!
+        // Greeting
+        function getGreeting() {
+          const now = new Date();
+          const hour = now.getHours();
+          if (hour < 12) return "Good Morning!";
+          if (hour < 18) return "Good Afternoon!";
+          return "Good Evening!";
+        }
+        document.getElementById('greeting').textContent = getGreeting();
 
-        // Load vehicles from Firestore for this user
-        async function loadVehicles() {
-          const list = document.getElementById('vehicleList');
+        // Modal logic
+        function openModal() {
+          document.getElementById('vehicleModal').style.display = 'block';
+        }
+        function closeModal() {
+          document.getElementById('vehicleModal').style.display = 'none';
+        }
+        function closeLogoutModal() {
+          document.getElementById('logoutModal').style.display = 'none';
+        }
+        function closeFuelRecordModal() {
+          document.getElementById('fuelRecordModal').style.display = 'none';
+          document.getElementById('fuelRecordForm').reset();
+          document.getElementById('fuelRecordForm').dataset.editId = "";
+        }
+        // Make modal functions globally available for inline onclick handlers
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.closeLogoutModal = closeLogoutModal;
+        window.closeFuelRecordModal = closeFuelRecordModal;
+
+        window.onclick = function(event) {
+          const vehicleModal = document.getElementById('vehicleModal');
+          const logoutModal = document.getElementById('logoutModal');
+          const fuelRecordModal = document.getElementById('fuelRecordModal');
+          if (event.target === vehicleModal) closeModal();
+          if (event.target === logoutModal) closeLogoutModal();
+          if (event.target === fuelRecordModal) closeFuelRecordModal();
+        };
+
+        // Service Modal logic
+        function openServiceModal(editData = null, docId = null) {
+          document.getElementById('serviceModal').style.display = 'block';
+          const title = document.getElementById('serviceModalTitle');
+          const submitBtn = document.getElementById('serviceFormSubmitBtn');
+          if (editData) {
+            title.textContent = "Edit Service Record";
+            submitBtn.textContent = "Update Record";
+          } else {
+            title.textContent = "Add Service Record";
+            submitBtn.textContent = "Add Record";
+          }
+          // Reset form and fill if editing
+          const form = document.getElementById('serviceForm');
+          form.reset();
+          if (editData) {
+            document.getElementById('serviceVehicle').value = editData.vehicleId;
+            document.getElementById('odoMeter').value = editData.odoMeter;
+            document.getElementById('serviceCost').value = editData.serviceCost;
+            document.getElementById('serviceNotes').value = editData.serviceNotes || "";
+          }
+          // Save docId for update
+          form.dataset.editId = docId || "";
+        }
+        function closeServiceModal() {
+          document.getElementById('serviceModal').style.display = 'none';
+          document.getElementById('serviceForm').reset();
+          document.getElementById('serviceForm').dataset.editId = "";
+        }
+        window.closeServiceModal = closeServiceModal;
+
+        document.getElementById('addServiceBtn').onclick = () => openServiceModal();
+
+        // --- Service Record Firestore logic ---
+        const serviceRef = collection(db, "serviceRecords");
+
+        // Track all vehicles globally for service dropdown
+        let allVehicles = [];
+
+        // Populate vehicle dropdown in service modal and service section
+        async function populateServiceVehicleDropdown(vehicles) {
+          allVehicles = vehicles; // update global
+          // Service modal dropdown
+          const select = document.getElementById('serviceVehicle');
+          select.innerHTML = '<option value="">Select Vehicle</option>';
+          vehicles.forEach(v => {
+            const opt = document.createElement('option');
+            const label = (v.data && v.data.number && v.data.model)
+              ? `${v.data.number} (${v.data.model})`
+              : (v.data && v.data.number)
+                ? v.data.number
+                : v.id;
+            opt.value = v.id;
+            opt.textContent = label;
+            select.appendChild(opt);
+          });
+          // Service section dropdown
+          const sectionSelect = document.getElementById('serviceVehicleDropdown');
+          sectionSelect.innerHTML = '<option value="">Select Vehicle</option>';
+          vehicles.forEach(v => {
+            const opt = document.createElement('option');
+            const label = (v.data && v.data.number && v.data.model)
+              ? `${v.data.number} (${v.data.model})`
+              : (v.data && v.data.number)
+                ? v.data.number
+                : v.id;
+            opt.value = v.id;
+            opt.textContent = label;
+            sectionSelect.appendChild(opt);
+          });
+        }
+
+        // Show only top 2 service records, expand on "Service History"
+        let serviceRecordsCache = [];
+        let serviceHistoryExpanded = false;
+
+        async function loadServiceRecords(user, vehicles) {
+          const list = document.getElementById('serviceRecordList');
           list.innerHTML = '';
-          try {
-            const q = query(vehiclesRef, where("user", "==", user.uid));
-            const querySnapshot = await getDocs(q);
-            if (querySnapshot.empty) {
-              list.innerHTML = '<div>No vehicles found.</div>';
-            } else {
-              querySnapshot.forEach((docSnap) => {
-                const vehicle = docSnap.data();
-                const entry = document.createElement('div');
-                entry.className = 'vehicle-entry';
-                entry.style.display = "flex";
-                entry.style.alignItems = "center";
-                entry.style.justifyContent = "space-between";
-                entry.style.gap = "10px";
-                entry.style.padding = "8px 0";
-                entry.innerHTML = `
+          const selectedVehicleId = document.getElementById('serviceVehicleDropdown').value;
+          const vehicleIds = vehicles.map(v => v.id);
+          if (vehicleIds.length === 0) {
+            list.innerHTML = '<p style="color: #888;">No vehicles found. Add a vehicle to track service records.</p>';
+            return;
+          }
+          if (selectedVehicleId === "") {
+            list.innerHTML = '<p style="color: #888;">Please select a vehicle to view service records.</p>';
+            return;
+          }
+          // Query only for selected vehicle
+          const q = query(serviceRef, where("user", "==", user.uid), where("vehicleId", "==", selectedVehicleId));
+          const querySnapshot = await getDocs(q);
+          let records = [];
+          querySnapshot.forEach(docSnap => {
+            const record = docSnap.data();
+            records.push({ id: docSnap.id, ...record });
+          });
+          // Sort by serviceDate descending if available
+          records.sort((a, b) => {
+            if (a.serviceDate && b.serviceDate) {
+              return b.serviceDate.localeCompare(a.serviceDate);
+            }
+            return 0;
+          });
+
+          // Always show all records when serviceHistoryExpanded is true (which is set on dropdown change)
+          let toShow = serviceHistoryExpanded ? records : records.slice(0, 2);
+
+          if (records.length === 0) {
+            list.innerHTML = '<p style="color: #888;">No service records found for this vehicle.</p>';
+          } else {
+            toShow.forEach(record => {
+              const vehicle = vehicles.find(v => v.id === record.vehicleId);
+              // Choose icon based on vehicle type
+              let icon = '';
+              if (vehicle && vehicle.data.type === 'Bike') {
+                icon = `<span style="font-size:16px;vertical-align:middle;margin-right:3px;">🏍️</span>`;
+              } else if (vehicle && vehicle.data.type === 'Car') {
+                icon = `<span style="font-size:16px;vertical-align:middle;margin-right:3px;">🚗</span>`;
+              }
+              const entry = document.createElement('div');
+              entry.className = 'service-entry';
+              entry.style.display = "flex";
+              entry.style.flexDirection = "column";
+              entry.style.gap = "2px";
+              entry.style.padding = "8px 0";
+              entry.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                   <span style="flex:1;">
-                    Type: ${vehicle.type} | Number: ${vehicle.number} | Model: ${vehicle.model} | Year: ${vehicle.year}
+                    <b>${icon}${vehicle ? vehicle.data.number : 'Unknown Vehicle'}</b> | ODO: ${record.odoMeter} | Cost: ₹${record.serviceCost}
                   </span>
                   <span style="display: flex; align-items: center; gap: 8px;">
-                    <button class="edit-btn" data-id="${docSnap.id}" title="Edit" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-                      <svg width="20" height="20" viewBox="0 0 20 20" style="vertical-align:middle;"><path d="M14.85 2.85a1.2 1.2 0 0 1 1.7 1.7l-9.1 9.1-2.1.4.4-2.1 9.1-9.1zm-9.7 10.55l-0.65 3.25a0.5 0.5 0 0 0 0.6 0.6l3.25-0.65 9.1-9.1a2.2 2.2 0 0 0-3.1-3.1l-9.1 9.1z" fill="#333"/></svg>
+                    <button class="edit-service-btn" data-id="${record.id}" title="Edit" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                      <svg width="20" height="20" viewBox="0 0 20 20" style="vertical-align:middle;"><path d="M14.85 2.85a1.2 1.2 0 0 1 1.7 1.7l-9.1 9.1-2.1.4.4-2.1 9.1-9.1zm-9.7 10.55l-0.65 3.25a0.5 0 0 0 0.6 0.6l3.25-0.65 9.1-9.1a2.2 2.2 0 0 0-3.1-3.1l-9.1 9.1z" fill="#333"/></svg>
                     </button>
-                    <button class="delete-btn" data-id="${docSnap.id}" title="Delete" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                    <button class="delete-service-btn" data-id="${record.id}" title="Delete" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
                       <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #f8d7da;">
                         <svg width="20" height="20" viewBox="0 0 20 20">
                           <circle cx="10" cy="10" r="9" fill="none"/>
@@ -141,134 +626,712 @@
                       </span>
                     </button>
                   </span>
-                `;
-                list.appendChild(entry);
-              });
+                </div>
+                <div style="margin-left: 2px; color: #444; font-size: 13px; margin-top: 2px;">
+                  <b>Notes:</b> ${record.serviceNotes ? record.serviceNotes : '<span style="color:#bbb;">(No notes)</span>'}
+                </div>
+              `;
+              list.appendChild(entry);
+            });
 
-              // Attach event listeners for delete
-              list.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.onclick = async function() {
-                  if (confirm("Are you sure you want to delete this vehicle?")) {
-                    await deleteDoc(doc(db, "vehicles", btn.getAttribute('data-id')));
-                    await loadVehicles();
-                  }
-                };
-              });
+            // Attach event listeners for edit and delete
+            list.querySelectorAll('.edit-service-btn').forEach(btn => {
+              btn.onclick = async function() {
+                const docId = btn.getAttribute('data-id');
+                const docRef = doc(db, "serviceRecords", docId);
+                const docSnap = await getDocs(query(serviceRef, where("__name__", "==", docId)));
+                let recordData;
+                docSnap.forEach(d => { recordData = d.data(); });
+                if (!recordData) return;
+                openServiceModal(recordData, docId);
+              };
+            });
+            list.querySelectorAll('.delete-service-btn').forEach(btn => {
+              btn.onclick = async function() {
+                if (confirm("Are you sure you want to delete this service record?")) {
+                  await deleteDoc(doc(db, "serviceRecords", btn.getAttribute('data-id')));
+                  await loadServiceRecords(user, vehicles);
+                }
+              };
+            });
+          }
 
-              // Attach event listeners for edit
-              list.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.onclick = async function() {
-                  const docId = btn.getAttribute('data-id');
-                  const docRef = doc(db, "vehicles", docId);
-                  const docSnap = await getDocs(query(vehiclesRef, where("__name__", "==", docId)));
-                  let vehicleData;
-                  docSnap.forEach(d => { vehicleData = d.data(); });
-                  if (!vehicleData) return;
-
-                  // Fill modal with existing data
-                  document.getElementById('vehicleType').value = vehicleData.type || "";
-                  document.getElementById('vehicleNumber').value = vehicleData.number || "";
-                  document.getElementById('vehicleModel').value = vehicleData.model || "";
-                  document.getElementById('yearOfPurchase').value = vehicleData.year || "";
-
-                  openModal();
-
-                  // Change button to "Update Vehicle"
-                  const form = document.getElementById('vehicleForm');
-                  const submitBtn = document.getElementById('vehicleFormSubmitBtn');
-                  const originalBtnText = submitBtn.textContent;
-                  submitBtn.textContent = "Update Vehicle";
-
-                  // Save original handler
-                  const originalHandler = form.onsubmit;
-                  form.onsubmit = async function(e) {
-                    e.preventDefault();
-                    const type = document.getElementById('vehicleType').value;
-                    const number = document.getElementById('vehicleNumber').value.trim().toUpperCase();
-                    const model = document.getElementById('vehicleModel').value.trim().toUpperCase();
-                    const year = document.getElementById('yearOfPurchase').value.trim();
-                    if (!type || !number || !model || !year) {
-                      alert("Please fill all fields.");
-                      return;
-                    }
-                    try {
-                      await updateDoc(docRef, {
-                        type,
-                        number,
-                        model,
-                        year
-                      });
-                      await loadVehicles();
-                      closeModal();
-                      form.reset();
-                      submitBtn.textContent = originalBtnText;
-                      form.onsubmit = originalHandler; // Restore original handler
-                    } catch (error) {
-                      alert("Error updating vehicle: " + error.message);
-                      console.error("Error updating vehicle:", error);
-                    }
-                  };
-                };
-              });
-            }
-          } catch (err) {
-            list.innerHTML = '<div style="color:red;">Failed to load vehicles: ' + err.message + '</div>';
-            console.error("Error loading vehicles:", err);
+          // Show/hide serviceHistoryBtn depending on records
+          const serviceHistoryBtn = document.getElementById('serviceHistoryBtn');
+          if (records.length > 2) {
+            serviceHistoryBtn.style.display = '';
+            serviceHistoryBtn.textContent = serviceHistoryExpanded ? "Hide History" : "Service History";
+          } else {
+            serviceHistoryBtn.style.display = 'none';
           }
         }
 
-        // Call loadVehicles on page load
-        loadVehicles();
+        // Service History button logic
+        document.getElementById('serviceHistoryBtn').onclick = async function() {
+          serviceHistoryExpanded = !serviceHistoryExpanded;
+          // Reload service records with expanded/collapsed state
+          const user = auth.currentUser;
+          if (!user) return;
+          const vehicles = await getAllVehicles(user);
+          await loadServiceRecords(user, vehicles);
+        };
 
-        // Ensure vehicle number and model are always uppercase on input
-        const vehicleNumberInput = document.getElementById('vehicleNumber');
-        const vehicleModelInput = document.getElementById('vehicleModel');
-        vehicleNumberInput.addEventListener('input', function() {
-          this.value = this.value.toUpperCase();
-        });
-        vehicleModelInput.addEventListener('input', function() {
-          this.value = this.value.toUpperCase();
-        });
-
-        // Handle form submission and save to Firestore
-        document.getElementById('vehicleForm').onsubmit = async function(e) {
+        // Handle service form submission (add or update)
+        document.getElementById('serviceForm').onsubmit = async function(e) {
           e.preventDefault();
-          const type = document.getElementById('vehicleType').value;
-          const number = document.getElementById('vehicleNumber').value.trim().toUpperCase();
-          const model = document.getElementById('vehicleModel').value.trim().toUpperCase();
-          const year = document.getElementById('yearOfPurchase').value.trim();
-          if (!type || !number || !model || !year) {
+          const vehicleId = document.getElementById('serviceVehicle').value;
+          const odo = document.getElementById('odoMeter').value;
+          const cost = document.getElementById('serviceCost').value;
+          const notes = document.getElementById('serviceNotes').value;
+          const editId = this.dataset.editId;
+          if (!vehicleId || !odo || !cost) {
             alert("Please fill all fields.");
             return;
           }
           try {
-            await addDoc(vehiclesRef, {
-              user: user.uid,
-              type: type,
-              number: number,
-              model: model,
-              year: year
-            });
-            await loadVehicles();
-            closeModal();
-            this.reset();
-          } catch (error) {
-            alert("Error saving vehicle: " + error.message);
-            console.error("Error saving vehicle:", error);
+            if (editId) {
+              // Update
+              const docRef = doc(db, "serviceRecords", editId);
+              await updateDoc(docRef, {
+                vehicleId,
+                odoMeter: odo,
+                serviceCost: cost,
+                serviceNotes: notes
+              });
+            } else {
+              // Add
+              await addDoc(serviceRef, {
+                user: auth.currentUser.uid,
+                vehicleId,
+                odoMeter: odo,
+                serviceCost: cost,
+                serviceNotes: notes
+              });
+            }
+            closeServiceModal();
+            // Reload service records after add/update
+            const vehicles = await getAllVehicles(auth.currentUser);
+            await loadServiceRecords(auth.currentUser, vehicles);
+          } catch (err) {
+            alert("Error saving service record: " + err.message);
           }
         };
 
-        // Logout button logic
-        document.getElementById('logoutBtn').onclick = function() {
-          document.getElementById('logoutModal').style.display = 'block';
-          setTimeout(async () => {
-            await signOut(auth);
-            localStorage.removeItem('autovault_username');
-            window.location.href = "login.html";
-          }, 2000);
+        // Helper to get all vehicles for user
+        async function getAllVehicles(user) {
+          const q = query(collection(db, "vehicles"), where("user", "==", user.uid));
+          const querySnapshot = await getDocs(q);
+          const vehicles = [];
+          querySnapshot.forEach(docSnap => {
+            vehicles.push({ id: docSnap.id, data: docSnap.data() });
+          });
+          return vehicles;
+        }
+
+        // Wait for Firebase Auth state
+        onAuthStateChanged(auth, async user => {
+          if (!user) {
+            setTimeout(() => {
+              window.location.href = "login.html";
+            }, 4000);
+            return;
+          }
+
+          const vehicles = await getAllVehicles(user);
+
+          // Populate vehicle dropdown for service modal
+          populateServiceVehicleDropdown(vehicles);
+
+          // Populate vehicle dropdown for fuel modal
+          populateFuelVehicleDropdown(vehicles);
+
+          // Load vehicles (existing code)
+          async function loadVehicles() {
+            const list = document.getElementById('vehicleList');
+            list.innerHTML = '';
+            try {
+              const q = query(collection(db, "vehicles"), where("user", "==", user.uid));
+              const querySnapshot = await getDocs(q);
+              if (querySnapshot.empty) {
+                list.innerHTML = '<div>No vehicles found.</div>';
+              } else {
+                querySnapshot.forEach((docSnap) => {
+                  const vehicle = docSnap.data();
+                  const entry = document.createElement('div');
+                  entry.className = 'vehicle-entry';
+                  entry.style.display = "flex";
+                  entry.style.alignItems = "center";
+                  entry.style.justifyContent = "space-between";
+                  entry.style.gap = "10px";
+                  entry.style.padding = "8px 0";
+                  entry.innerHTML = `
+                    <span style="flex:1;">
+                      Type: ${vehicle.type} | Number: ${vehicle.number} | Model: ${vehicle.model} | Year: ${vehicle.year}
+                      <br>Insurance Expiry: ${vehicle.insuranceExpiry || '-'}<br>Pollution Expiry: ${vehicle.pollutionExpiry || '-'}
+                    </span>
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                      <button class="edit-btn" data-id="${docSnap.id}" title="Edit" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                        <svg width="20" height="20" viewBox="0 0 20 20" style="vertical-align:middle;"><path d="M14.85 2.85a1.2 1.2 0 0 1 1.7 1.7l-9.1 9.1-2.1.4.4-2.1 9.1-9.1zm-9.7 10.55l-0.65 3.25a0.5 0 0 0 0.6 0.6l3.25-0.65 9.1-9.1a2.2 2.2 0 0 0-3.1-3.1l-9.1 9.1z" fill="#333"/></svg>
+                      </button>
+                      <button class="delete-btn" data-id="${docSnap.id}" title="Delete" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                        <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #f8d7da;">
+                          <svg width="20" height="20" viewBox="0 0 20 20">
+                            <circle cx="10" cy="10" r="9" fill="none"/>
+                            <text x="10" y="15" text-anchor="middle" font-size="18" font-family="Arial" fill="#d9534f">&#10005;</text>
+                          </svg>
+                        </span>
+                      </button>
+                    </span>
+                  `;
+                  list.appendChild(entry);
+                });
+
+                // Attach event listeners for delete
+                list.querySelectorAll('.delete-btn').forEach(btn => {
+                  btn.onclick = async function() {
+                    if (confirm("Are you sure you want to delete this vehicle?")) {
+                      await deleteDoc(doc(db, "vehicles", btn.getAttribute('data-id')));
+                      await loadVehicles();
+                    }
+                  };
+                });
+
+                // Attach event listeners for edit
+                list.querySelectorAll('.edit-btn').forEach(btn => {
+                  btn.onclick = async function() {
+                    const docId = btn.getAttribute('data-id');
+                    const docRef = doc(db, "vehicles", docId);
+                    // Use getDoc instead of getDocs+query for single doc fetch
+                    const docSnap = await getDoc(docRef);
+                    if (!docSnap.exists()) return;
+                    const vehicleData = docSnap.data();
+
+                    // Fill modal with existing data
+                    document.getElementById('vehicleType').value = vehicleData.type || "";
+                    document.getElementById('vehicleFuel').value = vehicleData.fuel || "";
+                    document.getElementById('vehicleNumber').value = vehicleData.number || "";
+                    document.getElementById('vehicleModel').value = vehicleData.model || "";
+                    setDateInputValue(document.getElementById('insuranceExpiry'), vehicleData.insuranceExpiry || "");
+                    setDateInputValue(document.getElementById('pollutionExpiry'), vehicleData.pollutionExpiry || "");
+                    document.getElementById('yearOfPurchase').value = vehicleData.year || "";
+
+                    openModal();
+
+                    // Change button to "Update Vehicle"
+                    const form = document.getElementById('vehicleForm');
+                    const submitBtn = document.getElementById('vehicleFormSubmitBtn');
+                    const originalBtnText = submitBtn.textContent;
+                    submitBtn.textContent = "Update Vehicle";
+
+                    // Save original handler
+                    const originalHandler = form.onsubmit;
+                    form.onsubmit = async function(e) {
+                      e.preventDefault();
+                      const type = document.getElementById('vehicleType').value;
+                      const fuel = document.getElementById('vehicleFuel').value;
+                      const number = document.getElementById('vehicleNumber').value.trim().toUpperCase();
+                      const model = document.getElementById('vehicleModel').value.trim().toUpperCase();
+                      let insuranceExpiry = document.getElementById('insuranceExpiry').value;
+                      let pollutionExpiry = document.getElementById('pollutionExpiry').value;
+                      const year = document.getElementById('yearOfPurchase').value.trim();
+
+                      // Convert to DD-MM-YYYY for storage
+                      insuranceExpiry = insuranceExpiry ? formatDateToDDMMYYYY(insuranceExpiry) : "";
+                      pollutionExpiry = pollutionExpiry ? formatDateToDDMMYYYY(pollutionExpiry) : "";
+
+                      if (!type || !fuel || !number || !model || !year) {
+                        alert("Please fill all mandatory fields.");
+                        return;
+                      }
+                      try {
+                        await updateDoc(docRef, {
+                          type,
+                          fuel,
+                          number,
+                          model,
+                          insuranceExpiry,
+                          pollutionExpiry,
+                          year
+                        });
+                        await loadVehicles();
+                        closeModal();
+                        form.reset();
+                        submitBtn.textContent = originalBtnText;
+                        form.onsubmit = originalHandler; // Restore original handler
+                      } catch (error) {
+                        alert("Error updating vehicle: " + error.message);
+                        console.error("Error updating vehicle:", error);
+                      }
+                    };
+                  };
+                });
+              }
+            } catch (err) {
+              list.innerHTML = '<div style="color:red;">Failed to load vehicles: ' + err.message + '</div>';
+              console.error("Error loading vehicles:", err);
+            }
+          }
+
+          // Initial load
+          await loadVehicles();
+          await loadServiceRecords(user, vehicles);
+
+          // Ensure vehicle number and model are always uppercase on input
+          const vehicleNumberInput = document.getElementById('vehicleNumber');
+          const vehicleModelInput = document.getElementById('vehicleModel');
+          vehicleNumberInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+          });
+          vehicleModelInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+          });
+
+          // Handle form submission and save to Firestore
+          document.getElementById('vehicleForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const type = document.getElementById('vehicleType').value;
+            const fuel = document.getElementById('vehicleFuel').value;
+            const number = document.getElementById('vehicleNumber').value.trim().toUpperCase();
+            const model = document.getElementById('vehicleModel').value.trim().toUpperCase();
+            let insuranceExpiry = document.getElementById('insuranceExpiry').value;
+            let pollutionExpiry = document.getElementById('pollutionExpiry').value;
+            const year = document.getElementById('yearOfPurchase').value.trim();
+
+            // Convert to DD-MM-YYYY for storage
+            function formatDateToDDMMYYYY(dateStr) {
+              if (!dateStr) return "";
+              const [yyyy, mm, dd] = dateStr.split("-");
+              return `${dd}-${mm}-${yyyy}`;
+            }
+            insuranceExpiry = insuranceExpiry ? formatDateToDDMMYYYY(insuranceExpiry) : "";
+            pollutionExpiry = pollutionExpiry ? formatDateToDDMMYYYY(pollutionExpiry) : "";
+
+            if (!type || !fuel || !number || !model || !year) {
+              alert("Please fill all mandatory fields.");
+              return;
+            }
+            try {
+              await addDoc(collection(db, "vehicles"), {
+                user: user.uid,
+                type,
+                fuel,
+                number,
+                model,
+                insuranceExpiry,
+                pollutionExpiry,
+                year
+              });
+              // Optionally reload vehicles list here if needed
+              if (typeof loadVehicles === "function") await loadVehicles();
+              closeModal();
+              vehicleForm.reset();
+            } catch (error) {
+              alert("Error saving vehicle: " + (error.message || error));
+              console.error("Error saving vehicle:", error);
+            }
+          };
+
+          // Logout button logic
+          document.getElementById('logoutBtn').onclick = function() {
+            document.getElementById('logoutModal').style.display = 'block';
+            // Play logout audio
+            const logoutAudio = document.getElementById('logoutAudio');
+            if (logoutAudio) {
+              logoutAudio.currentTime = 0;
+              logoutAudio.play().catch(() => {});
+            }
+            setTimeout(async () => {
+              await signOut(auth);
+              localStorage.removeItem('autovault_username');
+              window.location.href = "login.html";
+            }, 2000);
+          };
+        });
+
+        // Helper to format date as DD-MM-YYYY
+        function formatDateToDDMMYYYY(dateStr) {
+          if (!dateStr) return "";
+          const [yyyy, mm, dd] = dateStr.split("-");
+          return `${dd}-${mm}-${yyyy}`;
+        }
+        function formatDateToYYYYMMDD(dateStr) {
+          // Accepts DD-MM-YYYY, returns YYYY-MM-DD
+          if (!dateStr) return "";
+          const [dd, mm, yyyy] = dateStr.split("-");
+          return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Set input values and display formatted dates on load/edit
+        function setDateInputValue(input, value) {
+          if (!value) {
+            input.value = "";
+            return;
+          }
+          // If value is already YYYY-MM-DD, set directly
+          if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            input.value = value;
+          } else if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+            input.value = formatDateToYYYYMMDD(value);
+          }
+        }
+
+        // Show formatted date in input after selection
+        function handleDateInputBlur(e) {
+          if (e.target.value) {
+            e.target.setAttribute("data-formatted", formatDateToDDMMYYYY(e.target.value));
+          } else {
+            e.target.removeAttribute("data-formatted");
+          }
+        }
+
+        // On DOMContentLoaded, attach blur event to date inputs
+        document.addEventListener('DOMContentLoaded', () => {
+          const insuranceInput = document.getElementById('insuranceExpiry');
+          const pollutionInput = document.getElementById('pollutionExpiry');
+          insuranceInput.addEventListener('blur', handleDateInputBlur);
+          pollutionInput.addEventListener('blur', handleDateInputBlur);
+        });
+
+        // Add "GO" button click event for service vehicle selection
+        document.getElementById('serviceVehicleGoBtn').addEventListener('click', async function() {
+          const selectedVehicleId = document.getElementById('serviceVehicleDropdown').value;
+          if (!selectedVehicleId) {
+            alert("Please select a vehicle first.");
+            return;
+          }
+          const user = auth.currentUser;
+          if (!user) return;
+          serviceHistoryExpanded = false;
+          const latestVehicles = await getAllVehicles(user);
+          await loadServiceRecords(user, latestVehicles);
+        });
+
+        // --- Fuel Records Section with Firestore Integration ---
+        let fuelRecords = [];
+        let vehiclesForFuel = [];
+        let showingFuelHistory = false;
+
+        // Populate vehicle dropdown for fuel records
+        function populateFuelVehicleDropdown(vehicles) {
+          vehiclesForFuel = vehicles;
+          const select = document.getElementById('fuelVehicleDropdown');
+          select.innerHTML = '<option value="">Select Vehicle</option>';
+          vehicles.forEach(v => {
+            const opt = document.createElement('option');
+            const label = (v.data && v.data.number && v.data.model)
+              ? `${v.data.number} (${v.data.model})`
+              : (v.data && v.data.number)
+                ? v.data.number
+                : v.id;
+            opt.value = v.id;
+            opt.textContent = label;
+            select.appendChild(opt);
+          });
+          // Also populate modal dropdown
+          populateFuelRecordModalDropdown(vehicles);
+        }
+
+        // Populate vehicle dropdown in fuel record modal
+        function populateFuelRecordModalDropdown(vehicles) {
+          const select = document.getElementById('fuelRecordVehicle');
+          if (!select) return;
+          select.innerHTML = '<option value="">Select Vehicle</option>';
+          vehicles.forEach(v => {
+            const opt = document.createElement('option');
+            const label = (v.data && v.data.number && v.data.model)
+              ? `${v.data.number} (${v.data.model})`
+              : (v.data && v.data.number)
+                ? v.data.number
+                : v.id;
+            opt.value = v.id;
+            opt.textContent = label;
+            select.appendChild(opt);
+          });
+        }
+
+        // --- Add event listeners for GO button, dropdown, and Add Record button ---
+        function setupFuelRecordsEventListeners() {
+          const fuelVehicleDropdown = document.getElementById('fuelVehicleDropdown');
+          const fuelVehicleGoBtn = document.getElementById('fuelVehicleGoBtn');
+          const addFuelRecordBtn = document.getElementById('addFuelRecordBtn');
+          const fuelHistoryToggleBtn = document.getElementById('fuelHistoryToggleBtn');
+          const showFuelHistoryBtn = document.getElementById('showFuelHistoryBtn');
+          const resetFuelHistoryBtn = document.getElementById('resetFuelHistoryBtn');
+          const fuelHistoryControls = document.getElementById('fuelHistoryControls');
+
+          if (fuelVehicleDropdown) {
+            fuelVehicleDropdown.addEventListener('change', function() {
+              showingFuelHistory = false;
+              fuelHistoryControls.style.display = 'none';
+              renderFuelRecordsTable();
+            });
+          }
+          if (fuelVehicleGoBtn) {
+            fuelVehicleGoBtn.addEventListener('click', function() {
+              showingFuelHistory = false;
+              fuelHistoryControls.style.display = 'none';
+              renderFuelRecordsTable();
+            });
+          }
+          if (addFuelRecordBtn) {
+            addFuelRecordBtn.addEventListener('click', function() {
+              openFuelRecordModal();
+            });
+          }
+          if (fuelHistoryToggleBtn) {
+            fuelHistoryToggleBtn.addEventListener('click', function() {
+              showingFuelHistory = !showingFuelHistory;
+              fuelHistoryControls.style.display = showingFuelHistory ? 'flex' : 'none';
+              if (!showingFuelHistory) {
+                renderFuelRecordsTable();
+              }
+            });
+          }
+          if (showFuelHistoryBtn) {
+            showFuelHistoryBtn.addEventListener('click', function() {
+              renderFuelRecordsTable(true);
+            });
+          }
+          if (resetFuelHistoryBtn) {
+            resetFuelHistoryBtn.addEventListener('click', function() {
+              document.getElementById('fuelHistoryStart').value = '';
+              document.getElementById('fuelHistoryEnd').value = '';
+              renderFuelRecordsTable();
+            });
+          }
+        }
+
+        // Ensure listeners are attached after DOM is ready and after any dynamic content
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupFuelRecordsEventListeners);
+        } else {
+          setupFuelRecordsEventListeners();
+        }
+
+        // --- Fuel Records Table Rendering ---
+        async function fetchFuelRecords(vehicleId, userId) {
+          const q = query(collection(db, "fuelRecords"), where("user", "==", userId), where("vehicleId", "==", vehicleId));
+          const querySnapshot = await getDocs(q);
+          const records = [];
+          querySnapshot.forEach(docSnap => {
+            records.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          // Sort by date descending (latest first)
+          records.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          return records;
+        }
+
+        async function renderFuelRecordsTable(applyHistoryFilter = false) {
+          const container = document.getElementById('fuelRecordsTableContainer');
+          const select = document.getElementById('fuelVehicleDropdown');
+          const vehicleId = select.value;
+          const user = auth.currentUser;
+          if (!user || !vehicleId) {
+            container.innerHTML = '<div style="color:#888;">Please select a vehicle to view fuel records.</div>';
+            return;
+          }
+          let records = await fetchFuelRecords(vehicleId, user.uid);
+
+          // Filter by date range if requested
+          if (applyHistoryFilter) {
+            const start = document.getElementById('fuelHistoryStart').value;
+            const end = document.getElementById('fuelHistoryEnd').value;
+            if (start) {
+              records = records.filter(r => r.date >= start);
+            }
+            if (end) {
+              records = records.filter(r => r.date <= end);
+            }
+          }
+
+          if (!records.length) {
+            container.innerHTML = '<div style="color:#888;">No fuel records found for this vehicle.</div>';
+            return;
+          }
+
+          // Render table with Trip Mileage column
+          let html = `<table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>ODO</th>
+                <th>Liters</th>
+                <th>Expense</th>
+                <th>Trip Mileage</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>`;
+          records.forEach((r, idx) => {
+            let tripMileage = '-';
+            if (idx < records.length - 1 && r.tripMileage !== undefined) {
+              tripMileage = r.tripMileage ? `${r.tripMileage} km/l` : '-';
+            }
+            html += `<tr>
+              <td>${r.date || '-'}</td>
+              <td>${r.odo || '-'}</td>
+              <td>${r.liters || '-'}</td>
+              <td>₹${r.expense || '-'}</td>
+              <td>${tripMileage}</td>
+              <td>
+                <button class="edit-fuel-btn" data-id="${r.id}" title="Edit Fuel Record">✏️</button>
+                <button class="delete-fuel-btn" data-id="${r.id}" title="Delete Fuel Record">🗑️</button>
+              </td>
+            </tr>`;
+          });
+          html += `</tbody></table>`;
+          container.innerHTML = html;
+
+          // Attach edit/delete listeners
+          container.querySelectorAll('.edit-fuel-btn').forEach(btn => {
+            btn.onclick = async function() {
+              const docId = btn.getAttribute('data-id');
+              const docRef = doc(db, "fuelRecords", docId);
+              const docSnap = await getDoc(docRef);
+              if (!docSnap.exists()) return;
+              const data = docSnap.data();
+              openFuelRecordModal(data, docId);
+            };
+          });
+          container.querySelectorAll('.delete-fuel-btn').forEach(btn => {
+            btn.onclick = async function() {
+              if (confirm("Are you sure you want to delete this fuel record?")) {
+                await deleteDoc(doc(db, "fuelRecords", btn.getAttribute('data-id')));
+                renderFuelRecordsTable();
+              }
+            };
+          });
+        }
+
+        // --- Fuel Record Modal Logic ---
+        function openFuelRecordModal(data = null, docId = null) {
+          document.getElementById('fuelRecordModal').style.display = 'block';
+          const form = document.getElementById('fuelRecordForm');
+          form.reset();
+          document.getElementById('fuelRecordModalTitle').textContent = data ? "Edit Fuel Record" : "Add Fuel Record";
+          document.getElementById('fuelRecordFormSubmitBtn').textContent = data ? "Update" : "Save";
+          // Fill form if editing
+          if (data) {
+            document.getElementById('fuelRecordVehicle').value = data.vehicleId || "";
+            document.getElementById('fuelOdo').value = data.odo || "";
+            document.getElementById('fuelLiters').value = data.liters || "";
+            document.getElementById('fuelExpense').value = data.expense || "";
+            document.getElementById('fuelDate').value = data.date || "";
+            // Trip Mileage not in modal
+          }
+          // Store docId for update
+          form.dataset.editId = docId || "";
+        }
+
+        // Handle form submit (add/update)
+        document.getElementById('fuelRecordForm').onsubmit = async function(e) {
+          e.preventDefault();
+          const vehicleId = document.getElementById('fuelRecordVehicle').value;
+          const odo = parseFloat(document.getElementById('fuelOdo').value);
+          const liters = parseFloat(document.getElementById('fuelLiters').value);
+          const expense = document.getElementById('fuelExpense').value;
+          const date = document.getElementById('fuelDate').value;
+          const editId = this.dataset.editId;
+          if (!vehicleId || !odo || !liters || !expense || !date) {
+            alert("Please fill all fields.");
+            return;
+          }
+          try {
+            const user = auth.currentUser;
+            if (!user) return;
+            if (editId) {
+              // Update
+              const docRef = doc(db, "fuelRecords", editId);
+              await updateDoc(docRef, {
+                vehicleId,
+                odo,
+                liters,
+                expense,
+                date
+              });
+              // After update, recalculate tripMileage for the previous entry if needed
+              let records = await fetchFuelRecords(vehicleId, user.uid);
+              // Find the index of the updated record
+              const idx = records.findIndex(r => r.id === editId);
+              if (idx !== -1 && idx < records.length - 1) {
+                const current = records[idx];
+                const prev = records[idx + 1];
+                const distance = parseFloat(current.odo) - parseFloat(prev.odo);
+                const latestLiters = parseFloat(current.liters); // Use liters from latest entry
+                let tripMileage = null;
+                if (distance > 0 && latestLiters > 0) {
+                  tripMileage = (distance / latestLiters).toFixed(2);
+                }
+                const prevDocRef = doc(db, "fuelRecords", prev.id);
+                await updateDoc(prevDocRef, { tripMileage: tripMileage || null });
+                // Set current record's tripMileage to null (not applicable for latest fill)
+                await updateDoc(docRef, { tripMileage: null });
+              }
+            } else {
+              // Add new record
+              const newDocRef = await addDoc(collection(db, "fuelRecords"), {
+                user: user.uid,
+                vehicleId,
+                odo,
+                liters,
+                expense,
+                date,
+                tripMileage: null // Always set tripMileage to null for the latest record
+              });
+
+              // After adding, fetch all records for this vehicle, sorted by date descending
+              let records = await fetchFuelRecords(vehicleId, user.uid);
+
+              // If there are at least 2 records, calculate tripMileage for the previous record (second in array)
+              if (records.length >= 2) {
+                const latest = records[0];
+                const prev = records[1];
+                const distance = parseFloat(latest.odo) - parseFloat(prev.odo);
+                const latestLiters = parseFloat(latest.liters); // Use liters from latest entry
+                let tripMileage = null;
+                if (distance > 0 && latestLiters > 0) {
+                  tripMileage = (distance / latestLiters).toFixed(2);
+                }
+                // Save tripMileage to previous record
+                const prevDocRef = doc(db, "fuelRecords", prev.id);
+                await updateDoc(prevDocRef, { tripMileage: tripMileage || null });
+                // Ensure latest record's tripMileage is null
+                const latestDocRef = doc(db, "fuelRecords", latest.id);
+                await updateDoc(latestDocRef, { tripMileage: null });
+              }
+            }
+            closeFuelRecordModal();
+            renderFuelRecordsTable();
+          } catch (err) {
+            alert("Error saving fuel record: " + err.message);
+          }
         };
       });
-    });
-  </script>
+
+      // REMOVE this block to avoid duplicate banners:
+      // document.body.insertAdjacentHTML('afterbegin', `
+      //   <div style="text-align: center; font-family: 'Poppins', sans-serif; font-size: 14px; margin-top: 10px;">
+      //     <span>🇮🇳 Proudly Made in India ❤</span>
+      //   </div>
+      // `);
+      // document.body.insertAdjacentHTML('beforeend', `
+      //   <div style="background-color: #f0f8ff; border-radius: 10px; padding: 15px; margin: 20px auto; text-align: center; width: 90%; max-width: 600px; font-family: 'Poppins', sans-serif; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      //     <p style="margin-bottom: 8px;">
+      //       Developed with love by <strong>Sandeep Penmetsa</strong>
+      //     </p>
+      //     <p>
+      //       <a href="https://twitter.com/Sandeepvarma79" target="_blank" style="margin: 0 5px; text-decoration: none;">X</a>
+      //       |
+      //       <a href="https://www.linkedin.com/in/sandeeppenmetsa/" target="_blank" style="margin: 0 5px; text-decoration: none;">LinkedIn</a>
+      //       |
+      //       <a href="mailto:sandeepvarma.14322@gmail.com" style="margin: 0 5px; text-decoration: none;">Email</a>
+      //     </p>
+      //     <p style="margin-top: 10px; font-size: 13px;">
+      //       Thank you for using my very first app! ☺ Your feedback means the world to me. Let’s connect!
+      //      </p>
+      //   </div>
+      // `);
+    </script>
+  </div>
 </body>
 </html>

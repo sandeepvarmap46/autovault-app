@@ -142,3 +142,61 @@ header h2 {
   color: #fff;
   border-color: #0056b3;
 }
+
+/* Splash screen */
+.splash-screen {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: 9999;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  transition: opacity 0.6s;
+}
+.splash-logo {
+  width: 140px;
+  height: 140px;
+  margin-bottom: 28px;
+  opacity: 0;
+  transition: opacity 1.2s;
+}
+.splash-text {
+  opacity: 0;
+  transition: opacity 1.2s;
+  color: #FFA500;
+  font-size: 3.2rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  font-family: 'Segoe UI', sans-serif;
+  text-shadow: 0 2px 16px #000;
+}
+
+/* Dashboard header */
+.dashboard-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 24px;
+}
+.dashboard-logo {
+  margin-bottom: 10px;
+}
+.dashboard-logo-img {
+  height: 90px;
+  display: block;
+  margin: 0 auto;
+}
+.dashboard-header-row {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Modal center content */
+.modal-content-center {
+  text-align: center;
+}
